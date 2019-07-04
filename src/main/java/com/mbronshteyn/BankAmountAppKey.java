@@ -46,55 +46,55 @@ public class BankAmountAppKey {
     KStream<String, String> transactions = builder.stream("bank-input");
 
     // process headers
-    transactions.process( () -> new Processor() {
-        ProcessorContext context;
-        @Override
-        public void init(ProcessorContext context) {
-          this.context = context;
-        }
-        @Override
-        public void process(Object key, Object value) {
-          final Header[] headers = this.context.headers().toArray();
+    transactions.process(() -> new Processor() {
+      ProcessorContext context;
 
-          Transaction transaction = null;
-          try {
-            // convert json to java object
-            transaction = objectMapper.readValue((String)value, Transaction.class);
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
+      @Override
+      public void init(ProcessorContext context) {
+        this.context = context;
+      }
 
-          log.info( "Processing by header ************************");
-          log.info( "Header key: "  + headers[0].key() + " ;Header value: " + new String( headers[0].value() ));
-          log.info( "Transaction: " + transaction.toString() );
-          log.info( "Processing by header ************************\n");
+      @Override
+      public void process(Object key, Object value) {
+        final Header[] headers = this.context.headers().toArray();
 
-        }
-        @Override
-        public void close() {
-        }
-      });
-
-      // do key based processing
-      KStream<String, Transaction> transactionsStream = transactions
-      .mapValues((key, value) -> {
-
-        Transaction transaction;
+        Transaction transaction = null;
         try {
           // convert json to java object
-          transaction = objectMapper.readValue(value, Transaction.class);
+          transaction = objectMapper.readValue((String) value, Transaction.class);
         } catch (Exception e) {
           e.printStackTrace();
-          return null;
         }
-        return transaction;
-      })
-      .selectKey((key, value) -> value.getName() );
 
-    transactionsStream.foreach((key, transaction) -> {
-      log.info( "Processing by the key ===============================");
-      log.info( "Key: " + key + "; Transaction: " + transaction.toString());
-      log.info( "Processing by the key ===============================\n");
+        log.info("Processing by header ************************");
+        log.info("Header key: " + headers[0].key() + " ;Header value: " + new String(headers[0].value()));
+        log.info("Transaction: " + transaction.toString());
+        log.info("Processing by header ************************\n");
+
+      }
+
+      @Override
+      public void close() {
+      }
+    });
+
+    // do key based processing
+    transactions.mapValues((key, value) -> {
+      Transaction transaction;
+      try {
+        // convert json to java object
+        transaction = objectMapper.readValue(value, Transaction.class);
+      } catch (Exception e) {
+        e.printStackTrace();
+        return null;
+      }
+      return transaction;
+    })
+    .selectKey((key, value) -> value.getName())
+    .foreach((key, transaction) -> {
+      log.info("Processing by the key ===============================");
+      log.info("Key: " + key + "; Transaction: " + transaction.toString());
+      log.info("Processing by the key ===============================\n");
     });
 
     KafkaStreams streams = new KafkaStreams(builder.build(), config);

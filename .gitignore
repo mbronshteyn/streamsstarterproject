@@ -88,3 +88,4 @@ fabric.properties
 /.idea/compiler.xml
 /.idea/
 
+src/test/
